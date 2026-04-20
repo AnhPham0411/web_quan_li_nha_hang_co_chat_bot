@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================
+// ENUMS
+// =============================================
+
+enum Role {
+  ADMIN
+  STAFF
+  CUSTOMER
+
+  @@map("user_role")
+}
+
+enum TableStatus {
+  EMPTY
+  BOOKED
+  SERVING
+  CLEANING
+
+  @@map("table_status")
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  NO_SHOW
+
+  @@map("reservation_status")
+}
+
+// =============================================
+// MODELS
+// =============================================
+
+model User {
+  id           String   @id @default(uuid())
+  role         Role     @default(STAFF)
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  reservations Reservation[]
+
+  @@map("user")
+}
+
+/// Thực đơn quán ăn
+/// 🚨 PM FIX: Dùng stockQuantity (Int) thay vì isAvailable (Boolean)
+/// Với các món Signature như Bò Wagyu cần kiểm soát số lượng chính xác
+model MenuItem {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?  @db.Text
+  price         Decimal  @db.Decimal(10, 2)
+  imageUrl      String?  @db.Text
+  category      String   @default("Món chính")
+  stockQuantity Int      @default(10)
+  isAvailable   Boolean  @default(true)
+  isFeatured    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("menu_item")
+}
+
+/// Bàn ăn
+/// 🚨 PM FIX: 4 trạng thái thay vì 3 — thêm CLEANING để tránh trải nghiệm tồi
+/// 🚨 PM FIX: lockedUntil để soft-lock tránh race condition (đặt bàn trùng)
+model Table {
+  id           String        @id @default(uuid())
+  tableNumber  Int           @unique
+  capacity     Int
+  status       TableStatus   @default(EMPTY)
+  lockedUntil  DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  reservations Reservation[]
+
+  @@map("table")
+}
+
+/// Đặt bàn
+/// 🚨 PM FIX: status mặc định PENDING — không bao giờ để AI tự confirm booking
+/// 🚨 PM FIX: lockedUntil — hold bàn 5 phút khi Bot gợi ý, tránh double booking
+model Reservation {
+  id          String            @id @default(uuid())
+  tableId     String?
+  guestName   String
+  guestPhone  String
+  partySize   Int
+  notes       String?           @db.Text
+  source      String            @default("website") // "website" | "chatbot" | "walkin"
+  status      ReservationStatus @default(PENDING)
+  lockedUntil DateTime?
+  reservedAt  DateTime
+  confirmedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  table       Table?            @relation(fields: [tableId], references: [id])
+  userId      String?
+  user        User?             @relation(fields: [userId], references: [id])
+
+  @@index([tableId])
+  @@index([userId])
+  @@map("reservation")
+}

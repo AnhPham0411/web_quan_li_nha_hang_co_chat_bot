@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+  --primary: #00b6b1;    /* Oreka Teal */
+  --secondary: #ff8200;  /* Oreka Orange */
+  --oreka-green: #198754;
+  --oreka-orange: #ff5a1f;
+  --oreka-search: #f0f2f5;
+  --surface: #f8f9fa;
+  --accent: #ff8200;
+  --glass: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --zinc-500: #71717a;
+  --zinc-400: #a1a1aa;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-inter);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-md bg-[var(--glass)] border border-[var(--glass-border)] shadow-sm;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#00d1cd];
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,182,177,0.15)];
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-[#00a39f] transition-all;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-white font-bold py-3 px-6 rounded-xl hover:bg-[#e67500] transition-all;
+  }
+}
