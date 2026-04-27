@@ -14,17 +14,23 @@ export const metadata: Metadata = {
   description: "Khám phá thực đơn, đặt bàn trực tuyến và trải nghiệm ẩm thực Việt đậm đà tại Quán Ngon.",
 };
 
-export default function RootLayout({
+import { auth } from "@/lib/auth";
+import { ActiveOrderFAB } from "@/components/layout/ActiveOrderFAB";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+
   return (
-    <html lang="vi" className={`${inter.variable} h-full antialiased dark`}>
-      <body className="min-h-full flex flex-col font-sans">
-        <SessionProvider>
+    <html lang="vi" className={`${inter.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col font-sans bg-white text-zinc-900">
+        <SessionProvider session={session}>
           <Toaster position="bottom-right" />
           {children}
+          <ActiveOrderFAB />
         </SessionProvider>
       </body>
     </html>

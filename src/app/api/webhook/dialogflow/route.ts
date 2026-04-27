@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
 
-// 🚨 PM FIX - Bảo mật Webhook: Kiểm tra token ngay dòng đầu tiên
-// Chỉ request từ Dialogflow với đúng secret token mới được xử lý
+/**
+ * FORCE REBUILD - 2026-04-21 17:53
+ * Fixed syntax errors (bracket balancing).
+ */
+
 function verifyToken(req: NextRequest): boolean {
   const token = req.headers.get("x-dialogflow-token");
   return token === process.env.DIALOGFLOW_WEBHOOK_TOKEN;
 }
 
 export async function POST(req: NextRequest) {
-  // 🛡️ SECURITY GATE — Chặn mọi request không có/sai token ngay lập tức
   if (!verifyToken(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -33,10 +35,8 @@ export async function POST(req: NextRequest) {
   // =============================================
   if (intentName === "check_table" || intentName === "Check_Table") {
     const partySize = Number(parameters["party_size"] ?? parameters["number"] ?? 2);
-
     const now = new Date();
 
-    // Tìm bàn EMPTY, đủ chỗ, không bị khóa
     const availableTables = await prisma.table.findMany({
       where: {
         status: "EMPTY",
@@ -46,10 +46,9 @@ export async function POST(req: NextRequest) {
           { lockedUntil: { lt: now } },
         ],
       },
-      orderBy: { capacity: "asc" }, // Ưu tiên bàn vừa đủ chỗ
+      orderBy: { capacity: "asc" },
     });
 
-    // Kiểm tra ghép bàn nếu không có bàn đủ lớn
     let canMergeTables = false;
     let mergeableTables: typeof availableTables = [];
     if (availableTables.length === 0) {
@@ -66,27 +65,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Kiểm tra bàn đang dọn
-    const cleaningTables = await prisma.table.count({ where: { status: "CLEANING" } });
-
     if (availableTables.length > 0) {
-      // 🚨 PM FIX: Không hứa hẹn 100%, hướng dẫn khách chờ xác nhận
       const fulfillmentText =
         `Dạ hệ thống em ghi nhận hiện đang có ${availableTables.length} bàn phù hợp cho ${partySize} người ạ! ` +
         `Anh/chị cho em số điện thoại để nhân viên báo lại check thực tế và giữ chỗ cho mình nhé? 😊`;
-
       return NextResponse.json({ fulfillmentText });
     } else if (canMergeTables) {
       return NextResponse.json({
         fulfillmentText:
           `Dạ quán không có bàn đơn đủ cho ${partySize} người, nhưng có thể ghép ${mergeableTables.length} bàn lại ạ! ` +
           `Anh/chị để lại số điện thoại, nhân viên sẽ xác nhận và sắp xếp ngay nhé!`,
-      });
-    } else if (cleaningTables > 0) {
-      return NextResponse.json({
-        fulfillmentText:
-          `Dạ hiện bàn đang được dọn dẹp ạ. Khoảng 5-10 phút nữa là có chỗ. ` +
-          `Anh/chị có muốn em báo nhân viên giữ chỗ không ạ?`,
       });
     } else {
       return NextResponse.json({
@@ -117,7 +105,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 🚨 PM FIX: Kiểm tra stockQuantity chính xác, không chỉ boolean
     if (item.stockQuantity < quantity) {
       if (item.stockQuantity === 0) {
         return NextResponse.json({
@@ -142,97 +129,105 @@ export async function POST(req: NextRequest) {
   // =============================================
   // INTENT: Book_Table — Đặt bàn qua chatbot
   // =============================================
-  if (intentName === "book_table" || intentName === "Book_Table") {
-    const guestName: string = parameters["guest_name"] ?? parameters["person_name"] ?? "Quý khách";
-    const guestPhone: string = parameters["phone_number"] ?? parameters["phone"] ?? "";
-    const partySize = Number(parameters["party_size"] ?? parameters["number"] ?? 2);
-    const reservedAt: string = parameters["date_time"] ?? new Date().toISOString();
-    const notes: string = parameters["notes"] ?? "";
+  // [NOT IMPLEMENTED - Reserved for future use]
 
-    if (!guestPhone) {
+  // =============================================
+  // INTENT: Check_Reservation — Tra cứu đặt bàn
+  // =============================================
+  if (intentName === "check_reservation" || intentName === "Check_Reservation") {
+    const phone = parameters["phone_number"] ?? parameters["phone"] ?? "";
+
+    if (!phone) {
       return NextResponse.json({
-        fulfillmentText: `Dạ anh/chị cho em số điện thoại để nhân viên xác nhận và giữ chỗ cho mình nhé ạ!`,
+        fulfillmentText: "Dạ anh/chị cho em xin số điện thoại đã dùng để đặt bàn để em tra cứu ạ!",
       });
     }
 
-    const now = new Date();
+    const reservation = await prisma.reservation.findFirst({
+      where: {
+        guestPhone: phone,
+        status: { in: ["PENDING", "CONFIRMED"] },
+      },
+      orderBy: { createdAt: "desc" },
+      include: { table: { select: { tableNumber: true } } },
+    });
 
-    // 🚨 PM FIX: Dùng Prisma Transaction để lock bàn nguyên tử, tránh race condition
-    try {
-      const result = await prisma.$transaction(async (tx) => {
-        // Tìm bàn phù hợp, chưa bị lock
-        const table = await tx.table.findFirst({
-          where: {
-            status: "EMPTY",
-            capacity: { gte: partySize },
-            OR: [
-              { lockedUntil: null },
-              { lockedUntil: { lt: now } },
-            ],
-          },
-          orderBy: { capacity: "asc" },
-        });
-
-        // Tạo reservation (PENDING — nhân viên phải xác nhận)
-        const reservation = await tx.reservation.create({
-          data: {
-            tableId: table?.id ?? null,
-            guestName,
-            guestPhone,
-            partySize,
-            notes,
-            source: "chatbot",
-            status: "PENDING",
-            reservedAt: new Date(reservedAt),
-            // Soft-lock bàn 5 phút nếu tìm được bàn
-            lockedUntil: table ? new Date(now.getTime() + 5 * 60 * 1000) : null,
-          },
-        });
-
-        // Khóa bàn trong DB
-        if (table) {
-          await tx.table.update({
-            where: { id: table.id },
-            data: { lockedUntil: new Date(now.getTime() + 5 * 60 * 1000) },
-          });
-        }
-
-        return { reservation, table };
-      });
-
-      // 🚨 PM FIX: Bắn Pusher để nhân viên thấy đơn mới ngay — không cần F5
-      try {
-        await pusherServer.trigger("admin-channel", "new-reservation", {
-          message: `🤖 Đặt bàn qua Chatbot: ${guestName} (${partySize} người)`,
-          reservationId: result.reservation.id,
-          guestName,
-          guestPhone,
-          partySize,
-          source: "chatbot",
-          tableNumber: result.table?.tableNumber,
-        });
-      } catch (pusherErr) {
-        console.error("Pusher trigger failed:", pusherErr);
-      }
-
-      const tableInfo = result.table
-        ? `Bàn số ${result.table.tableNumber} đang được giữ tạm cho anh/chị 5 phút. `
-        : `Nhân viên sẽ sắp xếp bàn cho anh/chị. `;
-
+    if (!reservation) {
       return NextResponse.json({
-        // 🚨 PM FIX: Không xác nhận cứng, luôn nhắc "nhân viên check thực tế"
-        fulfillmentText:
-          `Đã ghi nhận! ${tableInfo}` +
-          `Nhân viên sẽ gọi lại số ${guestPhone} để xác nhận trong vài phút ạ. ` +
-          `Anh/chị nhớ nghe máy nhé! Cảm ơn ${guestName} ạ 🙏`,
+        fulfillmentText: `Dạ em không tìm thấy đơn đặt bàn nào cho số điện thoại ${phone} đang chờ hoặc đã xác nhận ạ. Anh/chị kiểm tra lại số giúp em nhé!`,
+      });
+    }
+
+    const statusText = reservation.status === "CONFIRMED" ? "Đã xác nhận ✅" : "Đang chờ duyệt ⏳";
+    const tableText = reservation.table ? ` | 🪑 Bàn: ${reservation.table.tableNumber}` : "";
+    const dateText = new Date(reservation.reservedAt).toLocaleString("vi-VN", {
+      weekday: "long",
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    return NextResponse.json({
+      fulfillmentText: 
+        `Dạ em tìm thấy thông tin đặt chỗ của anh/chị:\n` +
+        `📅 ${dateText}\n` +
+        `👥 ${reservation.partySize} người${tableText}\n` +
+        `Trạng thái: ${statusText}\n\n` +
+        `Anh/chị cần hỗ trợ gì thêm không ạ?`,
+    });
+  }
+
+  // =============================================
+  // INTENT: Cancel_Reservation — Hủy đặt bàn
+  // =============================================
+  if (intentName === "cancel_reservation" || intentName === "Cancel_Reservation") {
+    const phone = parameters["phone_number"] ?? parameters["phone"] ?? "";
+
+    if (!phone) {
+      return NextResponse.json({
+        fulfillmentText: "Dạ anh/chị cho em xin số điện thoại đặt bàn để em tiến hành hủy giúp mình ạ.",
+      });
+    }
+
+    const reservation = await prisma.reservation.findFirst({
+      where: {
+        guestPhone: phone,
+        status: { in: ["PENDING", "CONFIRMED"] },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!reservation) {
+      return NextResponse.json({
+        fulfillmentText: `Dạ em không thấy đơn đặt bàn nào của số ${phone} để hủy ạ.`,
+      });
+    }
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: { status: "CANCELLED" },
+    });
+
+    if (reservation.tableId) {
+      await prisma.table.update({
+        where: { id: reservation.tableId },
+        data: { status: "EMPTY", lockedUntil: null },
+      });
+    }
+
+    try {
+      await pusherServer.trigger("admin-channel", "reservation-cancelled", {
+        message: `🚫 Khách hủy bàn qua Bot: ${reservation.guestName} (${phone})`,
+        reservationId: reservation.id,
       });
     } catch (err) {
-      console.error("[Dialogflow] Book_Table error:", err);
-      return NextResponse.json({
-        fulfillmentText:
-          `Dạ hệ thống đang bận, anh/chị vui lòng gọi trực tiếp cho quán để đặt bàn nhé! Số ĐT: 0909 xxx xxx`,
-      });
+      console.error("Pusher cancel notify failed:", err);
     }
+
+    return NextResponse.json({
+      fulfillmentText: `Dạ em đã hủy đơn đặt bàn của anh/chị ${reservation.guestName} thành công rồi ạ. Hy vọng sớm được phục vụ anh/chị lần sau! 👋`,
+    });
   }
 
   // =============================================
@@ -242,7 +237,6 @@ export async function POST(req: NextRequest) {
     const isHandoff = body?.queryResult?.parameters?.isHandoff === true;
 
     if (isHandoff) {
-      // Bắn cảnh báo lên Dashboard để nhân viên nhảy vào hỗ trợ
       try {
         await pusherServer.trigger("admin-channel", "human-handoff", {
           message: "⚠️ Khách cần hỗ trợ trực tiếp! Bot không hiểu yêu cầu.",
@@ -260,7 +254,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Default response
   return NextResponse.json({
     fulfillmentText: "Dạ em không hiểu câu hỏi này. Anh/chị có thể hỏi về bàn ăn, thực đơn, hoặc đặt chỗ không ạ?",
   });

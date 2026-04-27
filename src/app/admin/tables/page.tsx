@@ -13,6 +13,10 @@ export default async function TablesPage() {
         take: 1,
         orderBy: { reservedAt: "asc" },
       },
+      orders: {
+        where: { status: { in: ["PENDING", "CONFIRMED", "PREPARING", "SERVED"] } },
+        include: { items: { include: { menuItem: true } } }
+      }
     },
   });
 
@@ -26,6 +30,24 @@ export default async function TablesPage() {
       ...r,
       reservedAt: r.reservedAt.toISOString(),
     })),
+    orders: t.orders.map((order) => ({
+      ...order,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
+      items: order.items.map((item) => ({
+        ...item,
+        createdAt: item.createdAt.toISOString(),
+        menuItem: {
+          ...item.menuItem,
+          price: Number(item.menuItem.price),
+          createdAt: item.menuItem.createdAt.toISOString(),
+          updatedAt: item.menuItem.updatedAt.toISOString(),
+        },
+      })),
+    })),
+    currentBill: t.orders.reduce((acc, order) => {
+        return acc + order.items.reduce((sum, item) => sum + (Number(item.menuItem.price) * item.quantity), 0);
+    }, 0)
   }));
 
   return (

@@ -14,11 +14,24 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
 
-    // Fake API call
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.ok) {
+        setSuccess(true);
+      } else {
+        const error = await res.json();
+        alert(error.error || "Có lỗi xảy ra, vui lòng thử lại.");
+      }
+    } catch (error) {
+      alert("Lỗi kết nối server.");
+    } finally {
       setLoading(false);
-      setSuccess(true);
-    }, 1500);
+    }
   };
 
   return (
@@ -31,7 +44,7 @@ export default function ForgotPasswordPage() {
         <div className="bg-white p-10 md:p-12 rounded-[48px] shadow-2xl relative overflow-hidden">
           <div className="flex flex-col items-center mb-10 text-center">
             <Link href="/" className="flex items-center gap-2 mb-8 group">
-              <div className="bg-amber-500 p-2.5 rounded-2xl group-hover:rotate-12 transition-transform">
+              <div className="bg-blue-500 p-2.5 rounded-2xl group-hover:rotate-12 transition-transform">
                 <UtensilsCrossed className="text-white w-6 h-6" />
               </div>
               <span className="text-3xl font-black tracking-tight text-zinc-900">Quán Ngon</span>
@@ -48,7 +61,7 @@ export default function ForgotPasswordPage() {
                   type="email"
                   placeholder="Email của bạn"
                   required
-                  className="w-full bg-zinc-50 border-2 border-transparent focus:border-amber-400/50 focus:bg-white rounded-2xl py-4 pl-14 pr-6 text-sm transition-all outline-none"
+                  className="w-full bg-zinc-50 border-2 border-transparent focus:border-blue-400/50 focus:bg-white rounded-2xl py-4 pl-14 pr-6 text-sm transition-all outline-none"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -57,7 +70,7 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-amber-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-amber-600 transition-all disabled:opacity-50 mt-4 active:scale-95"
+                className="w-full bg-blue-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-600 transition-all disabled:opacity-50 mt-4 active:scale-95"
               >
                 {loading ? "ĐANG GỬI..." : "GỬI LIÊN KẾT"}
                 {!loading && <ArrowRight className="w-5 h-5" />}
@@ -74,7 +87,7 @@ export default function ForgotPasswordPage() {
               </div>
               <h3 className="text-lg font-black text-zinc-900 mb-2">Đã gửi liên kết!</h3>
               <p className="text-zinc-500 text-sm mb-8">Vui lòng kiểm tra hộp thư email của bạn (bao gồm cả thư mục Spam) và làm theo hướng dẫn.</p>
-              <Link href="/login" className="text-amber-500 font-black hover:underline flex items-center justify-center gap-2">
+              <Link href="/login" className="text-blue-500 font-black hover:underline flex items-center justify-center gap-2">
                 Quay lại đăng nhập
                 <ArrowRight className="w-4 h-4" />
               </Link>
@@ -84,7 +97,7 @@ export default function ForgotPasswordPage() {
           {!success && (
             <p className="text-center text-zinc-500 text-sm mt-10 font-medium">
               Nhớ ra mật khẩu?{" "}
-              <Link href="/login" className="text-amber-500 hover:underline font-black">
+              <Link href="/login" className="text-blue-500 hover:underline font-black">
                 Đăng nhập
               </Link>
             </p>

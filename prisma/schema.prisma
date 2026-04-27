@@ -50,6 +50,9 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   reservations Reservation[]
+  passwordResetTokens PasswordResetToken[]
+  shifts              Shift[]
+  pushSubscriptions   PushSubscription[]
 
   @@map("user")
 }
@@ -69,6 +72,7 @@ model MenuItem {
   isFeatured    Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  orderItems    OrderItem[]
 
   @@map("menu_item")
 }
@@ -83,9 +87,10 @@ model Table {
   status       TableStatus   @default(EMPTY)
   lockedUntil  DateTime?
   notes        String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  reservations Reservation[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  reservations   Reservation[]
+  orders         Order[]
 
   @@map("table")
 }
@@ -114,4 +119,86 @@ model Reservation {
   @@index([tableId])
   @@index([userId])
   @@map("reservation")
+}
+
+// =============================================
+// NEW MODELS FOR PHASE 1 & 4
+// =============================================
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_token")
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  tableId   String
+  status    OrderStatus @default(PENDING)
+  notes     String?     @db.Text
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  table Table       @relation(fields: [tableId], references: [id])
+  items OrderItem[]
+
+  @@map("order")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  quantity   Int
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@map("order_item")
+}
+
+model Shift {
+  id        String   @id @default(uuid())
+  staffId   String
+  date      DateTime @db.Date
+  startTime DateTime
+  endTime   DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+
+  staff User @relation(fields: [staffId], references: [id])
+
+  @@map("shift")
+}
+
+model PushSubscription {
+  id           String   @id @default(uuid())
+  userId       String?
+  p256dhKey    String
+  authKey      String
+  createdAt    DateTime @default(now())
+  
+  user         User?    @relation(fields: [userId], references: [id])
+
+  @@map("push_subscription")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  SERVED
+  CANCELLED
+  PAID
+
+  @@map("order_status")
 }

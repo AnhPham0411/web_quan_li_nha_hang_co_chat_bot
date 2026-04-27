@@ -19,7 +19,7 @@ export default async function HistoryPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "bg-amber-100 text-amber-700 border-amber-200";
+        return "bg-blue-100 text-blue-700 border-blue-200";
       case "CONFIRMED":
         return "bg-emerald-100 text-emerald-700 border-emerald-200";
       case "CANCELLED":
@@ -48,13 +48,13 @@ export default async function HistoryPage() {
   return (
     <main className="min-h-screen bg-zinc-50 pt-8 pb-20">
       <div className="container mx-auto px-6 max-w-4xl">
-        <Link href="/" className="inline-flex items-center gap-2 text-zinc-500 hover:text-amber-500 font-bold mb-8 transition-colors">
+        <Link href="/" className="inline-flex items-center gap-2 text-zinc-500 hover:text-blue-500 font-bold mb-8 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Quay lại Trang chủ
         </Link>
 
         <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-amber-500/20">
+          <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20">
             <History className="w-6 h-6" />
           </div>
           <div>
@@ -70,7 +70,7 @@ export default async function HistoryPage() {
             </div>
             <h2 className="text-xl font-black text-zinc-900 mb-2">Chưa có mã đặt bàn nào</h2>
             <p className="text-zinc-500 mb-8 max-w-sm mx-auto">Bạn chưa đặt bàn lần nào tại Quán Ngon. Hãy đặt bàn để trải nghiệm ẩm thực bạn nhé!</p>
-            <Link href="/#reservation" className="inline-flex items-center gap-2 bg-amber-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all active:scale-95 shadow-lg shadow-amber-500/30">
+            <Link href="/#reservation" className="inline-flex items-center gap-2 bg-blue-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-blue-500/30">
               Đặt bàn ngay
             </Link>
           </div>
@@ -93,7 +93,7 @@ export default async function HistoryPage() {
                     </h3>
                   </div>
                   {res.status === "PENDING" && (
-                    <div className="bg-amber-50 rounded-xl p-3 text-amber-800 text-xs font-bold ring-1 ring-amber-200/50">
+                    <div className="bg-blue-50 rounded-xl p-3 text-blue-800 text-xs font-bold ring-1 ring-blue-200/50">
                       Nhân viên sắp gọi xác nhận 📞
                     </div>
                   )}

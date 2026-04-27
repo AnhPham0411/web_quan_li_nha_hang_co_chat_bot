@@ -128,6 +128,41 @@ export function PusherListener() {
       );
     });
 
+    // 🍴 Đơn gọi món mới
+    channel.bind("new-order", (data: any) => {
+      setNotifCount((prev) => prev + 1);
+
+      try {
+        const audio = new Audio("/ting.mp3");
+        audio.play();
+      } catch {}
+
+      toast(
+        (t) => (
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-amber-500 rounded-2xl flex items-center justify-center text-white font-black">
+              {data.tableNumber}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-black text-zinc-900 leading-none">Bàn #{data.tableNumber} - Gọi món mới</p>
+              <div className="mt-2 space-y-1">
+                {data.items?.map((item: any, i: number) => (
+                  <p key={i} className="text-xs text-zinc-500">
+                    <span className="font-bold text-zinc-900">{item.quantity}x</span> {item.name}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        ),
+        { 
+          duration: 8000,
+          style: { borderRadius: "24px", padding: "16px", minWidth: "300px" },
+          icon: <span className="text-xl">🍲</span>
+        }
+      );
+    });
+
     return () => {
       channel.unbind_all();
       pusher.unsubscribe("admin-channel");

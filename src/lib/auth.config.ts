@@ -38,9 +38,19 @@ export const authConfig = {
       const isPublicRoute =
         nextUrl.pathname === "/" ||
         nextUrl.pathname === "/login" ||
+        nextUrl.pathname === "/register" ||
+        nextUrl.pathname === "/forgot-password" ||
+        nextUrl.pathname === "/reset-password" ||
+        nextUrl.pathname === "/menu" ||
+        nextUrl.pathname === "/reservation" ||
+        nextUrl.pathname.startsWith("/order") ||
         isApiPublicRoute;
 
-      const isAuthRoute = nextUrl.pathname === "/login";
+      const isAuthRoute = 
+        nextUrl.pathname === "/login" || 
+        nextUrl.pathname === "/register" ||
+        nextUrl.pathname === "/forgot-password" ||
+        nextUrl.pathname === "/reset-password";
 
       if (isApiAuthRoute || isApiPublicRoute) return true;
 

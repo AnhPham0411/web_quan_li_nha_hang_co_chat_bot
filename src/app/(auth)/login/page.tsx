@@ -51,16 +51,16 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6 bg-zinc-50 relative overflow-hidden">
+    <main className="min-h-screen flex items-center justify-center p-6 bg-blue-50/50 relative overflow-hidden">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-md"
       >
-        <div className="bg-white p-10 md:p-12 rounded-[48px] shadow-2xl relative overflow-hidden">
+        <div className="bg-white p-10 md:p-12 rounded-[48px] shadow-2xl shadow-blue-900/10 relative overflow-hidden">
           <div className="flex flex-col items-center mb-10">
             <Link href="/" className="flex items-center gap-2 mb-8 group">
-              <div className="bg-amber-500 p-2.5 rounded-2xl group-hover:rotate-12 transition-transform">
+              <div className="bg-blue-600 p-2.5 rounded-2xl group-hover:rotate-12 transition-transform shadow-lg shadow-blue-200">
                 <UtensilsCrossed className="text-white w-6 h-6" />
               </div>
               <span className="text-3xl font-black tracking-tight text-zinc-900">Quán Ngon</span>
@@ -106,13 +106,16 @@ export default function LoginPage() {
                   type="password"
                   placeholder="Mật khẩu"
                   required
-                  className="w-full bg-zinc-50 border-2 border-transparent focus:border-amber-400/50 focus:bg-white rounded-2xl py-4 pl-14 pr-6 text-sm transition-all outline-none"
+                  className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-400/50 focus:bg-white rounded-2xl py-4 pl-14 pr-6 text-sm transition-all outline-none text-zinc-900"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />
               </div>
-              <div className="flex justify-end">
-                <Link href="/forgot-password" className="text-sm font-semibold text-zinc-500 hover:text-amber-500 transition-colors">
+              <div className="flex justify-end pr-1">
+                <Link 
+                  href="/forgot-password" 
+                  className="text-sm font-black text-blue-600 hover:text-blue-700 transition-all py-2 px-4 hover:bg-blue-50 rounded-2xl border border-transparent hover:border-blue-200"
+                >
                   Quên mật khẩu?
                 </Link>
               </div>
@@ -121,7 +124,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-amber-600 transition-all disabled:opacity-50 mt-4 active:scale-95"
+              className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-all disabled:opacity-50 mt-4 active:scale-95 shadow-xl shadow-blue-600/20"
             >
               {loading ? "ĐANG ĐĂNG NHẬP..." : "ĐĂNG NHẬP"}
               {!loading && <ArrowRight className="w-5 h-5" />}
@@ -130,7 +133,7 @@ export default function LoginPage() {
 
           <p className="text-center text-zinc-500 text-sm mt-10 font-medium">
             Chưa có tài khoản?{" "}
-            <Link href="/register" className="text-amber-500 hover:underline font-black">
+            <Link href="/register" className="text-blue-600 hover:underline font-black">
               Đăng ký
             </Link>
           </p>

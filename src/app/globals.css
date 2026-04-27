@@ -1,56 +1,65 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #1a1a1a;
-  --primary: #00b6b1;    /* Oreka Teal */
-  --secondary: #ff8200;  /* Oreka Orange */
-  --oreka-green: #198754;
-  --oreka-orange: #ff5a1f;
-  --oreka-search: #f0f2f5;
-  --surface: #f8f9fa;
-  --accent: #ff8200;
-  --glass: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(0, 0, 0, 0.05);
-  --zinc-500: #71717a;
-  --zinc-400: #a1a1aa;
+  --background: #fdfcf8;
+  --foreground: #1c1917;
+  --primary: #ab4e19;    /* Refined Terracotta */
+  --secondary: #f59e0b;  /* Amber 500 */
+  --zinc-50: #fafaf9;
 }
 
-@theme inline {
+.dark {
+  --background: #1c1917;
+  --foreground: #fdfcf8;
+  --primary: #ea580c;
+  --secondary: #fbbf24;
+  --zinc-50: #292524;
+}
+
+@theme {
+  --font-sans: var(--font-inter);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
-  --color-surface: var(--surface);
-  --color-accent: var(--accent);
-  --font-sans: var(--font-inter);
+  --color-zinc-50: var(--zinc-50);
 }
 
 @layer base {
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--background);
+    color: var(--foreground);
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
 @layer utilities {
   .glass {
-    @apply backdrop-blur-md bg-[var(--glass)] border border-[var(--glass-border)] shadow-sm;
+    @apply backdrop-blur-md bg-white/10 border border-white/20 shadow-sm;
   }
   
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#00d1cd];
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-amber-500;
   }
 
   .hover-glow {
-    @apply transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,182,177,0.15)];
+    @apply transition-all duration-300 hover:shadow-[0_10px_30px_rgba(194,65,12,0.15)];
   }
 
   .btn-primary {
-    @apply bg-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-[#00a39f] transition-all;
+    @apply bg-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-orange-800 transition-all;
   }
 
   .btn-secondary {
-    @apply bg-secondary text-white font-bold py-3 px-6 rounded-xl hover:bg-[#e67500] transition-all;
+    @apply bg-secondary text-white font-bold py-3 px-6 rounded-xl hover:bg-amber-600 transition-all;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
   }
 }

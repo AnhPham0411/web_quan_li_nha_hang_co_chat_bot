@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Users, Clock, CheckCircle, Loader2, Plus, Trash2 } from "lucide-react";
+import { useState, useTransition, useEffect } from "react";
+import { Users, Clock, CheckCircle, Loader2, Plus, Trash2, Receipt, ChevronRight, SquareMenu, ExternalLink } from "lucide-react";
+import Pusher from "pusher-js";
 
-type TableStatus = "EMPTY" | "BOOKED" | "SERVING" | "CLEANING";
+type TableStatus = "EMPTY" | "BOOKED" | "SERVING";
 
 
 interface TableData {
@@ -11,13 +12,25 @@ interface TableData {
   tableNumber: number;
   capacity: number;
   status: TableStatus;
-  notes: string | null;
   lockedUntil: string | null;
+  currentBill: number;
   reservations: Array<{
     guestName: string;
     partySize: number;
     reservedAt: string;
     status: string;
+  }>;
+  orders: Array<{
+    id: string;
+    status: string;
+    items: Array<{
+      id: string;
+      quantity: number;
+      menuItem: {
+        name: string;
+        price: number;
+      };
+    }>;
   }>;
 }
 
@@ -47,19 +60,11 @@ const STATUS_CONFIG: Record<
     bg: "bg-red-50 hover:bg-red-100",
     border: "border-red-200",
     dot: "bg-red-500",
-    next: "CLEANING",
-  },
-  CLEANING: {
-    label: "Đang dọn",
-    color: "text-zinc-600",
-    bg: "bg-zinc-100 hover:bg-zinc-200",
-    border: "border-zinc-300",
-    dot: "bg-zinc-400",
     next: "EMPTY",
   },
 };
 
-const ALL_STATUSES: TableStatus[] = ["EMPTY", "BOOKED", "SERVING", "CLEANING"];
+const ALL_STATUSES: TableStatus[] = ["EMPTY", "BOOKED", "SERVING"];
 
 export function TablesClient({ initialTables }: { initialTables: TableData[] }) {
   const [tables, setTables] = useState<TableData[]>(initialTables);
@@ -67,6 +72,75 @@ export function TablesClient({ initialTables }: { initialTables: TableData[] }) 
   const [isPending, startTransition] = useTransition();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTable, setNewTable] = useState({ tableNumber: "", capacity: "4" });
+
+  useEffect(() => {
+    const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
+    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+    if (!pusherKey || !pusherCluster) return;
+
+    const pusher = new Pusher(pusherKey, { cluster: pusherCluster });
+    const channel = pusher.subscribe("admin-channel");
+
+    channel.bind("table-updated", (data: { tableId: string; status: TableStatus }) => {
+      setTables((prev) =>
+        prev.map((t) =>
+          t.id === data.tableId 
+            ? { 
+                ...t, 
+                status: data.status,
+                // Nếu bàn trống thì xóa luôn bill hiện tại để tránh hiển thị sai
+                currentBill: data.status === "EMPTY" ? 0 : t.currentBill,
+                orders: data.status === "EMPTY" ? [] : t.orders,
+                lockedUntil: data.status === "EMPTY" ? null : t.lockedUntil
+              } 
+            : t
+        )
+      );
+    });
+
+    // 🍕 Listen for new orders to update bill in real-time
+    channel.bind("new-order", (data: { 
+      tableId: string; 
+      orderId: string; 
+      items: Array<{ name: string; quantity: number; price: number }> 
+    }) => {
+      const newItemsTotal = data.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      
+      setTables((prev) =>
+        prev.map((t) =>
+          t.id === data.tableId 
+            ? { 
+                ...t, 
+                status: "SERVING", // Chắc chắn là đang phục vụ
+                currentBill: t.currentBill + newItemsTotal,
+                orders: [
+                  ...t.orders,
+                  {
+                    id: data.orderId,
+                    status: "PENDING",
+                    items: data.items.map((item, idx) => ({
+                      id: `${data.orderId}-${idx}`,
+                      quantity: item.quantity,
+                      menuItem: {
+                        name: item.name,
+                        price: item.price
+                      }
+                    }))
+                  }
+                ]
+              } 
+            : t
+        )
+      );
+    });
+
+    return () => {
+      channel.unbind_all();
+      pusher.unsubscribe("admin-channel");
+      pusher.disconnect();
+    };
+  }, []);
 
   const updateStatus = async (table: TableData, newStatus: TableStatus) => {
     // Optimistic update
@@ -110,12 +184,20 @@ export function TablesClient({ initialTables }: { initialTables: TableData[] }) 
     });
   };
 
-  const deleteTable = async (id: string) => {
-    if (!confirm("Xóa bàn này?")) return;
-    const res = await fetch(`/api/tables/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setTables((prev) => prev.filter((t) => t.id !== id));
-      setSelectedTable(null);
+
+
+  const refreshData = async () => {
+    try {
+      const res = await fetch("/api/tables");
+      if (res.ok) {
+        const data = await res.json();
+        // Cần format lại dữ liệu tương tự như page.tsx nếu API /api/tables chưa format
+        // Tuy nhiên thường API này trả về list table thô.
+        // Để đơn giản, ta reload trang hoặc fetch lại.
+        window.location.reload(); 
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -125,21 +207,31 @@ export function TablesClient({ initialTables }: { initialTables: TableData[] }) 
   return (
     <div>
       {/* Status Legend + Stats */}
-      <div className="flex flex-wrap gap-3 mb-8">
-        {ALL_STATUSES.map((s) => (
-          <div
-            key={s}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${STATUS_CONFIG[s].bg} ${STATUS_CONFIG[s].border}`}
-          >
-            <div className={`w-2.5 h-2.5 rounded-full ${STATUS_CONFIG[s].dot}`} />
-            <span className={`text-sm font-bold ${STATUS_CONFIG[s].color}`}>
-              {STATUS_CONFIG[s].label}
-            </span>
-            <span className={`text-sm font-black ${STATUS_CONFIG[s].color}`}>
-              ({countByStatus(s)})
-            </span>
-          </div>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <div className="flex flex-wrap gap-3">
+          {ALL_STATUSES.map((s) => (
+            <div
+              key={s}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${STATUS_CONFIG[s].bg} ${STATUS_CONFIG[s].border}`}
+            >
+              <div className={`w-2.5 h-2.5 rounded-full ${STATUS_CONFIG[s].dot}`} />
+              <span className={`text-sm font-bold ${STATUS_CONFIG[s].color}`}>
+                {STATUS_CONFIG[s].label}
+              </span>
+              <span className={`text-sm font-black ${STATUS_CONFIG[s].color}`}>
+                ({countByStatus(s)})
+              </span>
+            </div>
+          ))}
+        </div>
+        
+        <button 
+          onClick={refreshData}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50 transition-all text-sm font-bold shadow-sm"
+        >
+          <Clock className="w-4 h-4" />
+          Làm mới
+        </button>
       </div>
 
       {/* Table Grid */}
@@ -171,6 +263,11 @@ export function TablesClient({ initialTables }: { initialTables: TableData[] }) 
                 <Users className="w-3 h-3" />
                 <span className="text-xs font-bold">{table.capacity}</span>
               </div>
+              {table.status === "SERVING" && table.currentBill > 0 && (
+                <p className="text-[10px] font-black mt-2 text-red-600 bg-red-100 rounded px-1.5 py-0.5 inline-block">
+                  {table.currentBill.toLocaleString("vi-VN")}đ
+                </p>
+              )}
               <p className={`text-[10px] font-bold mt-1 text-center ${cfg.color}`}>
                 {cfg.label}
               </p>
@@ -229,13 +326,87 @@ export function TablesClient({ initialTables }: { initialTables: TableData[] }) 
               ))}
             </div>
 
-            <button
-              onClick={() => deleteTable(selectedTable.id)}
-              className="w-full py-2.5 rounded-xl text-sm font-bold text-red-600 border-2 border-red-200 bg-red-50 hover:bg-red-100 flex items-center justify-center gap-2 transition-all"
+            <a
+              href={`/order/${selectedTable.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full mb-6 py-3 rounded-2xl text-xs font-black bg-zinc-50 text-zinc-500 border border-zinc-200 hover:bg-zinc-100 transition-all flex items-center justify-center gap-2 group"
             >
-              <Trash2 className="w-4 h-4" />
-              Xóa bàn này
-            </button>
+              <ExternalLink className="w-3.5 h-3.5 group-hover:text-primary transition-colors" />
+              MỞ TRANG GỌI MÓN (GIAO DIỆN KHÁCH)
+            </a>
+
+            {selectedTable.status !== "SERVING" && (
+              <button
+                onClick={() => updateStatus(selectedTable, "SERVING")}
+                className="w-full mb-6 py-4 rounded-2xl text-sm font-black bg-amber-500 text-white hover:bg-amber-600 transition-all shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 active:scale-95 border-b-4 border-amber-700"
+              >
+                <CheckCircle className="w-5 h-5" />
+                NHẬN KHÁCH VÀO BÀN
+              </button>
+            )}
+
+            {selectedTable.status === "SERVING" && selectedTable.orders.length > 0 && (
+              <div className="mb-6 animate-in fade-in slide-in-from-bottom-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <SquareMenu className="w-4 h-4 text-zinc-400" />
+                  <span className="text-sm font-black text-zinc-900 uppercase tracking-tight">Món đã gọi</span>
+                </div>
+                <div className="bg-zinc-50 rounded-2xl p-4 space-y-3 max-h-48 overflow-y-auto border border-zinc-100">
+                  {selectedTable.orders.flatMap(o => o.items).map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between group">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-zinc-400 w-4">{item.quantity}x</span>
+                        <span className="text-sm font-bold text-zinc-700">{item.menuItem.name}</span>
+                      </div>
+                      <span className="text-xs font-black text-zinc-900">
+                        {(item.quantity * item.menuItem.price).toLocaleString("vi-VN")}đ
+                      </span>
+                    </div>
+                  ))}
+                  <div className="pt-3 border-t border-dashed border-zinc-200 flex justify-between items-center">
+                    <span className="text-xs font-black text-zinc-400 uppercase">Tổng cộng</span>
+                    <span className="text-sm font-black text-amber-600">
+                      {selectedTable.currentBill.toLocaleString("vi-VN")}đ
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedTable.status === "SERVING" && (
+              <button
+                onClick={async () => {
+                   const total = selectedTable.currentBill;
+                   if(confirm(`Xác nhận thanh toán ${total.toLocaleString("vi-VN")}đ và giải phóng bàn ${selectedTable.tableNumber}?`)) {
+                      // Sử dụng API checkout nguyên tử
+                      const res = await fetch(`/api/tables/${selectedTable.id}/checkout`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                      });
+
+                      if (res.ok) {
+                        // Cập nhật local state ngay lập tức
+                        setTables(prev => prev.map(t => 
+                          t.id === selectedTable.id 
+                            ? { ...t, status: "EMPTY", currentBill: 0, orders: [] } 
+                            : t
+                        ));
+                        setSelectedTable(null);
+                      } else {
+                        alert("Thanh toán thất bại, vui lòng thử lại");
+                      }
+                   }
+                }}
+                className="w-full mb-3 py-4 rounded-2xl text-sm font-black bg-zinc-900 text-white hover:bg-amber-500 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95"
+              >
+                <Receipt className="w-4 h-4" />
+                THANH TOÁN & TRẢ BÀN
+              </button>
+            )}
+
+
+
           </div>
         </div>
       )}

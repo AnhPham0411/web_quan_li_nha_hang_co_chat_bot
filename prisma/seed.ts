@@ -44,33 +44,34 @@ async function main() {
   // Tạo thực đơn mẫu
   const menuItems = [
     // Khai vị
-    { name: "Gỏi cuốn tôm thịt", price: 65000, category: "Khai vị", stockQuantity: 50, isFeatured: false },
-    { name: "Chả giò chiên giòn", price: 55000, category: "Khai vị", stockQuantity: 50 },
+    { name: "Gỏi cuốn tôm thịt", price: 65000, category: "Khai vị", stockQuantity: 50, isFeatured: false, imageUrl: "/images/menu/goi-cuon.png" },
+    { name: "Chả giò chiên giòn", price: 55000, category: "Khai vị", stockQuantity: 50, imageUrl: "/images/menu/cha-gio.png" },
 
     // Món chính
-    { name: "Cơm tấm sườn bì chả", price: 85000, category: "Món chính", stockQuantity: 30, isFeatured: true },
-    { name: "Bún bò Huế", price: 75000, category: "Món chính", stockQuantity: 30 },
-    { name: "Phở bò tái nạm", price: 80000, category: "Món chính", stockQuantity: 25 },
-    { name: "Bò Wagyu nướng muối ớt", price: 380000, category: "Món chính", stockQuantity: 5, isFeatured: true, description: "Bò Wagyu thượng hạng nhập khẩu, nướng trên bếp than hoa" },
+    { name: "Cơm tấm sườn bì chả", price: 85000, category: "Món chính", stockQuantity: 30, isFeatured: true, imageUrl: "/images/menu/com-tam.png" },
+    { name: "Bún bò Huế", price: 75000, category: "Món chính", stockQuantity: 30, imageUrl: "/images/menu/bun-bo-hue.png" },
+    { name: "Phở bò tái nạm", price: 80000, category: "Món chính", stockQuantity: 25, imageUrl: "/images/menu/pho-bo.png" },
+    { name: "Bò Wagyu nướng muối ớt", price: 380000, category: "Món chính", stockQuantity: 5, isFeatured: true, imageUrl: "/images/menu/bo-wagyu.png", description: "Bò Wagyu thượng hạng nhập khẩu, nướng trên bếp than hoa" },
 
     // Lẩu & Nướng
-    { name: "Lẩu thái hải sản", price: 350000, category: "Lẩu & Nướng", stockQuantity: 20, isFeatured: true },
-    { name: "Lẩu bò dầm sa tế", price: 320000, category: "Lẩu & Nướng", stockQuantity: 20 },
-    { name: "Gà nướng mật ong", price: 220000, category: "Lẩu & Nướng", stockQuantity: 15, isFeatured: true },
+    { name: "Lẩu thái hải sản", price: 350000, category: "Lẩu & Nướng", stockQuantity: 20, isFeatured: true, imageUrl: "/images/menu/lau-thai.png" },
+    { name: "Lẩu bò dầm sa tế", price: 320000, category: "Lẩu & Nướng", stockQuantity: 20, imageUrl: "/images/menu/lau-bo.png" },
+    { name: "Gà nướng mật ong", price: 220000, category: "Lẩu & Nướng", stockQuantity: 15, isFeatured: true, imageUrl: "/images/menu/ga-nuong.png" },
 
     // Cơm & Bún
-    { name: "Cơm chiên dương châu", price: 65000, category: "Cơm & Bún", stockQuantity: 40 },
-    { name: "Bún thịt nướng", price: 70000, category: "Cơm & Bún", stockQuantity: 35 },
+    { name: "Cơm chiên dương châu", price: 65000, category: "Cơm & Bún", stockQuantity: 40, imageUrl: "/images/menu/com-chien.png" },
+    { name: "Bún thịt nướng", price: 70000, category: "Cơm & Bún", stockQuantity: 35, imageUrl: "/images/menu/bun-thit-nuong.png" },
 
     // Tráng miệng
-    { name: "Chè ba màu", price: 35000, category: "Tráng miệng", stockQuantity: 30 },
-    { name: "Bánh flan caramel", price: 30000, category: "Tráng miệng", stockQuantity: 25 },
+    { name: "Chè ba màu", price: 35000, category: "Tráng miệng", stockQuantity: 30, imageUrl: "/images/menu/che-ba-mau.png" },
+    { name: "Bánh flan caramel", price: 30000, category: "Tráng miệng", stockQuantity: 25, imageUrl: "/images/menu/banh-flan.png" },
 
     // Đồ uống
-    { name: "Nước ngọt lon", price: 20000, category: "Đồ uống", stockQuantity: 100 },
-    { name: "Trà đá", price: 10000, category: "Đồ uống", stockQuantity: 999 },
-    { name: "Bia Tiger lon", price: 35000, category: "Đồ uống", stockQuantity: 100 },
-    { name: "Nước ép cam tươi", price: 45000, category: "Đồ uống", stockQuantity: 50 },
+    { name: "Nước ngọt lon", price: 20000, category: "Đồ uống", stockQuantity: 100, imageUrl: "/images/menu/nuoc-ngot.png" },
+    { name: "Trà đá", price: 10000, category: "Đồ uống", stockQuantity: 999, imageUrl: "/images/menu/tra-da.png" },
+    { name: "Bia Tiger lon", price: 35000, category: "Đồ uống", stockQuantity: 100, imageUrl: "/images/menu/bia-tiger.png" },
+    { name: "Nước ép cam tươi", price: 45000, category: "Đồ uống", stockQuantity: 50, imageUrl: "/images/menu/nuoc-cam.png" },
+
   ];
 
   for (const item of menuItems) {

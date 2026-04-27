@@ -21,9 +21,19 @@ export const proxy = auth((req) => {
     nextUrl.pathname === "/" ||
     nextUrl.pathname === "/login" ||
     nextUrl.pathname === "/register" ||
+    nextUrl.pathname === "/forgot-password" ||
+    nextUrl.pathname === "/reset-password" ||
+    nextUrl.pathname === "/menu" ||
+    nextUrl.pathname === "/reservation" ||
+    nextUrl.pathname.startsWith("/order") ||
     isApiPublicRoute;
 
-  const isAuthRoute = ["/login", "/register"].includes(nextUrl.pathname);
+  const isAuthRoute = [
+    "/login", 
+    "/register", 
+    "/forgot-password", 
+    "/reset-password"
+  ].includes(nextUrl.pathname);
 
   if (isApiAuthRoute || isApiPublicRoute) return NextResponse.next();
 

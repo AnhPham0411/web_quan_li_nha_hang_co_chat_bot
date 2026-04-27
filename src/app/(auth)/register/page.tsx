@@ -45,16 +45,16 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6 bg-zinc-50 relative overflow-hidden">
+    <main className="min-h-screen flex items-center justify-center p-6 bg-blue-50/50 relative overflow-hidden">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-lg"
       >
-        <div className="bg-white p-10 md:p-12 rounded-[48px] shadow-2xl relative overflow-hidden">
+        <div className="bg-white p-10 md:p-12 rounded-[48px] shadow-2xl shadow-blue-900/10 relative overflow-hidden">
           <div className="flex flex-col items-center mb-10">
             <Link href="/" className="flex items-center gap-2 mb-6 group">
-              <div className="bg-amber-500 p-2.5 rounded-2xl group-hover:rotate-12 transition-transform">
+              <div className="bg-blue-600 p-2.5 rounded-2xl group-hover:rotate-12 transition-transform shadow-lg shadow-blue-200">
                 <UtensilsCrossed className="text-white w-6 h-6" />
               </div>
               <span className="text-3xl font-black tracking-tight text-zinc-900">Quán Ngon</span>
@@ -112,7 +112,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-amber-600 transition-all disabled:opacity-50 mt-4 active:scale-95"
+              className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-all disabled:opacity-50 mt-4 active:scale-95 shadow-xl shadow-blue-600/20"
             >
               {loading ? "ĐANG TẠO..." : "ĐĂNG KÝ"}
               {!loading && <ArrowRight className="w-5 h-5" />}
@@ -121,7 +121,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-zinc-500 text-sm mt-10 font-medium">
             Đã có tài khoản?{" "}
-            <Link href="/login" className="text-amber-500 hover:underline font-black">
+            <Link href="/login" className="text-blue-600 hover:underline font-black">
               Đăng nhập
             </Link>
           </p>
