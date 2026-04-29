@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { MenuClient } from "./MenuClient";
+import { serializePrisma } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -8,10 +9,7 @@ export default async function MenuPage() {
     orderBy: [{ isFeatured: "desc" }, { category: "asc" }, { name: "asc" }],
   });
 
-  const items = rawItems.map((item) => ({
-    ...item,
-    price: Number(item.price),
-  }));
+  const items = serializePrisma(rawItems);
 
   return (
     <div>

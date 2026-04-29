@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   ChevronDown,
   Package,
+  Copy,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,6 +20,8 @@ interface Order {
   tableId: string;
   status: string;
   notes: string | null;
+  discountAmount: number;
+  totalPrice: number | null;
   createdAt: string;
   table: {
     tableNumber: number;
@@ -134,7 +137,16 @@ export default function OrdersClient({ initialOrders }: { initialOrders: Order[]
   };
 
   const calculateTotal = (order: Order) => {
+    if (order.totalPrice !== undefined && order.totalPrice !== null) {
+      return Number(order.totalPrice);
+    }
     return order.items.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0);
+  };
+
+  const copyReviewLink = (orderId: string) => {
+    const url = `${window.location.origin}/review/${orderId}`;
+    navigator.clipboard.writeText(url);
+    alert("Đã sao chép link đánh giá cho khách hàng!");
   };
 
   const range = searchParams.get("range");
@@ -359,6 +371,7 @@ export default function OrdersClient({ initialOrders }: { initialOrders: Order[]
                     <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Bàn</th>
                     <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Chi tiết món</th>
                     <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Tổng tiền</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -392,6 +405,15 @@ export default function OrdersClient({ initialOrders }: { initialOrders: Order[]
                           <span className="text-sm font-black text-emerald-600">
                             {calculateTotal(order).toLocaleString("vi-VN")}đ
                           </span>
+                        </td>
+                        <td className="px-6 py-5 text-right">
+                          <button
+                            onClick={() => copyReviewLink(order.id)}
+                            className="inline-flex items-center gap-2 bg-zinc-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-700 transition-all active:scale-95"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            LINK ĐÁNH GIÁ
+                          </button>
                         </td>
                       </tr>
                     ))}

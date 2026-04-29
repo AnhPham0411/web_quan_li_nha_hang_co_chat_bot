@@ -5,9 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function serializePrisma<T>(data: T): T {
+export function serializePrisma<T>(data: T): any {
   return JSON.parse(JSON.stringify(data, (key, value) => {
-    if (typeof value === "object" && value?.constructor?.name === "Decimal") {
+    if (value && typeof value === "object" && (value.constructor?.name === "Decimal" || value.constructor?.name === "d")) {
       return Number(value);
     }
     return value;

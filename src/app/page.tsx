@@ -134,9 +134,10 @@ export default async function Home() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {featuredItems.map((item) => (
-            <div
+            <Link
               key={item.id}
-              className="bg-white rounded-[2.5rem] border border-zinc-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden group"
+              href={`/menu?itemId=${item.id}`}
+              className="bg-white rounded-[2.5rem] border border-zinc-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden group block cursor-pointer"
             >
               <div className="h-64 bg-zinc-100 overflow-hidden relative">
                 {item.imageUrl ? (
@@ -169,7 +170,7 @@ export default async function Home() {
                   </p>
                 )}
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -207,6 +208,85 @@ export default async function Home() {
                 </Link>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* === REVIEWS SECTION === */}
+      <section className="py-32 bg-white relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-zinc-200 to-transparent" />
+        <div className="container mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-20">
+            <div className="inline-flex items-center gap-2 text-primary font-black text-xs uppercase tracking-[0.2em] mb-4">
+              <Star className="w-4 h-4 fill-primary" />
+              Đánh giá từ thực khách
+            </div>
+            <h2 className="text-5xl font-black text-zinc-900 leading-tight mb-6">
+              Khách hàng nói gì về <br/>
+              <span className="text-primary font-serif italic">Quán Ngon?</span>
+            </h2>
+            <div className="flex justify-center gap-1.5 mb-8">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Star key={i} className="w-6 h-6 text-primary fill-primary" />
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+            {[
+              {
+                name: "Anh Tuấn",
+                comment: "Bò Wagyu ở đây thực sự là tuyệt phẩm, mềm tan trong miệng. Không gian rất ấm cúng và sang trọng.",
+                rating: 5,
+                date: "2 ngày trước"
+              },
+              {
+                name: "Chị Lan Hương",
+                comment: "Dịch vụ rất chuyên nghiệp, đặt bàn qua website rất nhanh chóng. Món lẩu thái hải sản đậm đà, rất tươi.",
+                rating: 5,
+                date: "1 tuần trước"
+              },
+              {
+                name: "Minh Quang",
+                comment: "Nhân viên nhiệt tình, chu đáo. Đồ ăn ra nhanh và nóng hổi. Sẽ còn quay lại nhiều lần nữa!",
+                rating: 5,
+                date: "2 tuần trước"
+              }
+            ].map((rev, i) => (
+              <div key={i} className="bg-zinc-50 rounded-[2.5rem] p-10 border border-zinc-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+                <div className="flex gap-1 mb-6">
+                  {Array.from({ length: rev.rating }).map((_, j) => (
+                    <Star key={j} className="w-4 h-4 text-primary fill-primary" />
+                  ))}
+                </div>
+                <p className="text-zinc-600 text-lg font-medium leading-relaxed mb-8 italic">
+                  "{rev.comment}"
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-orange-200 flex items-center justify-center font-black text-primary">
+                    {rev.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h4 className="font-black text-zinc-900">{rev.name}</h4>
+                    <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">{rev.date}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col items-center gap-6">
+            <p className="text-zinc-500 font-medium">Bạn đã từng trải nghiệm tại Quán Ngon?</p>
+            <Link 
+              href="/reservation/history"
+              className="px-12 py-5 bg-primary text-white rounded-2xl font-black text-xl hover:bg-orange-700 hover:-translate-y-1 hover:shadow-2xl hover:shadow-orange-500/50 transition-all shadow-xl shadow-orange-500/30 active:scale-95 flex items-center gap-3"
+            >
+              GỬI ĐÁNH GIÁ CỦA BẠN
+              <ArrowRight className="w-6 h-6" />
+            </Link>
+            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em]">
+              Đánh giá của bạn giúp chúng tôi hoàn thiện hơn mỗi ngày
+            </p>
           </div>
         </div>
       </section>

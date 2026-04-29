@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Minus, ShoppingBag, Utensils, CheckCircle2, Loader2, ArrowLeft, Receipt, X, Timer, ChefHat, Send, Sparkles, Clock, Home } from "lucide-react";
+import { Plus, Minus, ShoppingBag, Utensils, CheckCircle2, Loader2, ArrowLeft, Receipt, X, Timer, ChefHat, Send, Sparkles, Clock, Home, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Pusher from "pusher-js";
+import Link from "next/link";
 
 interface MenuItem {
   id: string;
@@ -20,6 +21,7 @@ interface CartItem extends MenuItem {
 
 interface BillItem {
   id: string;
+  orderId: string;
   name: string;
   price: number;
   quantity: number;
@@ -39,6 +41,14 @@ export default function OrderClient({ table: initialTable, menuItems }: { table:
   const [guestPhone, setGuestPhone] = useState("");
   const [checkInError, setCheckInError] = useState("");
   const [lastOrderedItems, setLastOrderedItems] = useState<CartItem[]>([]);
+  const [voucherCode, setVoucherCode] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState<{ id: string, code: string, discountAmount: number } | null>(null);
+  const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
+  const [voucherError, setVoucherError] = useState("");
+  const [availableVouchers, setAvailableVouchers] = useState<any[]>([]);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [lastOrderId, setLastOrderId] = useState<string | null>(null);
   const router = useRouter();
 
   // Load cart from localStorage
@@ -58,6 +68,23 @@ export default function OrderClient({ table: initialTable, menuItems }: { table:
       localStorage.setItem("activeTableId", table.id);
       localStorage.setItem("activeTableNumber", table.tableNumber.toString());
     }
+
+    // Fetch vouchers
+    const fetchVouchers = async () => {
+      try {
+        const res = await fetch("/api/vouchers");
+        if (res.ok) {
+          const data = await res.json();
+          const now = new Date();
+          setAvailableVouchers(data.filter((v: any) => 
+            v.isActive && (!v.endDate || new Date(v.endDate) > now)
+          ));
+        }
+      } catch (err) {
+        console.error("Fetch vouchers failed", err);
+      }
+    };
+    fetchVouchers();
   }, [table.id, table.tableNumber]);
 
   // Sync cart to localStorage
@@ -84,9 +111,7 @@ export default function OrderClient({ table: initialTable, menuItems }: { table:
       if (data.status === "EMPTY") {
         localStorage.removeItem("activeTableId");
         localStorage.removeItem("activeTableNumber");
-        // Optional: toast or alert user
-        alert("Bàn của bạn đã được thanh toán và dọn dẹp. Cảm ơn quý khách!");
-        window.location.href = "/menu";
+        setShowFinishModal(true);
       }
     });
 
@@ -107,6 +132,9 @@ export default function OrderClient({ table: initialTable, menuItems }: { table:
       if (res.ok) {
         const data = await res.json();
         setBill(data);
+        if (data.items.length > 0) {
+          setLastOrderId(data.items[0].orderId);
+        }
       }
     } catch (err) {
       console.error("Fetch bill failed", err);
@@ -179,7 +207,32 @@ export default function OrderClient({ table: initialTable, menuItems }: { table:
     }
   };
 
+  const handleApplyVoucher = async () => {
+    if (!voucherCode.trim() || isValidatingVoucher) return;
+    setIsValidatingVoucher(true);
+    setVoucherError("");
+    try {
+      const res = await fetch("/api/vouchers/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: voucherCode, amount: totalPrice }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAppliedVoucher(data);
+        setVoucherCode("");
+      } else {
+        setVoucherError(data.error || "Mã không hợp lệ");
+      }
+    } catch (err) {
+      setVoucherError("Lỗi kết nối");
+    } finally {
+      setIsValidatingVoucher(false);
+    }
+  };
+
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const finalPrice = appliedVoucher ? Math.max(0, totalPrice - appliedVoucher.discountAmount) : totalPrice;
 
   const handleSubmitOrder = async () => {
     if (cart.length === 0 || isSubmitting) return;
@@ -194,7 +247,10 @@ export default function OrderClient({ table: initialTable, menuItems }: { table:
           items: cart.map(item => ({
             menuItemId: item.id,
             quantity: item.quantity
-          }))
+          })),
+          voucherId: appliedVoucher?.id,
+          discountAmount: appliedVoucher?.discountAmount || 0,
+          totalPrice: finalPrice
         }),
       });
 
@@ -202,6 +258,7 @@ export default function OrderClient({ table: initialTable, menuItems }: { table:
         setLastOrderedItems([...cart]);
         setIsSuccess(true);
         setCart([]);
+        setAppliedVoucher(null);
         localStorage.removeItem(`cart_${table.id}`);
         fetchBill();
       }
@@ -395,30 +452,83 @@ export default function OrderClient({ table: initialTable, menuItems }: { table:
             exit={{ y: 100, opacity: 0 }}
             className="fixed bottom-0 left-0 right-0 p-6 z-50 pointer-events-none"
           >
-            <div className="max-w-lg mx-auto w-full bg-zinc-900 text-white rounded-[32px] p-6 shadow-2xl flex items-center justify-between pointer-events-auto ring-4 ring-white/10">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center relative">
-                  <ShoppingBag className="w-5 h-5" />
-                  <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
-                    {cart.reduce((a, b) => a + b.quantity, 0)}
-                  </span>
+            <div className="max-w-lg mx-auto w-full bg-zinc-900 text-white rounded-[32px] p-6 shadow-2xl flex flex-col gap-4 pointer-events-auto ring-4 ring-white/10">
+              {/* Voucher Input */}
+              {!appliedVoucher ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={voucherCode}
+                      onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                      placeholder="Mã giảm giá?"
+                      className="flex-1 bg-white/10 border-none rounded-xl px-4 py-2 text-xs font-bold focus:ring-1 focus:ring-amber-500 outline-none placeholder:text-white/30"
+                    />
+                    <button 
+                      onClick={handleApplyVoucher}
+                      disabled={!voucherCode || isValidatingVoucher}
+                      className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-30 transition-all min-w-[80px]"
+                    >
+                      {isValidatingVoucher ? <Loader2 className="w-3 h-3 animate-spin" /> : "ÁP DỤNG"}
+                    </button>
+                  </div>
+                  {availableVouchers.length > 0 && (
+                    <button 
+                      onClick={() => setShowVoucherModal(true)}
+                      className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5 hover:text-amber-400 transition-colors w-fit px-1"
+                    >
+                      <Sparkles className="w-3 h-3" /> Xem danh sách mã giảm giá ({availableVouchers.length})
+                    </button>
+                  )}
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-0.5">Tổng cộng</p>
-                  <p className="text-lg font-black text-amber-500">{totalPrice.toLocaleString("vi-VN")}đ</p>
+              ) : (
+                <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <span className="text-[10px] font-black uppercase text-amber-500">Đã áp dụng: {appliedVoucher.code}</span>
+                  </div>
+                  <button onClick={() => setAppliedVoucher(null)} className="text-amber-500/50 hover:text-amber-500">
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
+              )}
+
+              {voucherError && <p className="text-[10px] font-bold text-red-400 px-1">{voucherError}</p>}
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center relative">
+                    <ShoppingBag className="w-5 h-5" />
+                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
+                      {cart.reduce((a, b) => a + b.quantity, 0)}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-0.5">
+                      {appliedVoucher ? "Sau giảm giá" : "Tổng cộng"}
+                    </p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-lg font-black text-amber-500">{finalPrice.toLocaleString("vi-VN")}đ</p>
+                      {appliedVoucher && (
+                        <p className="text-[10px] font-bold text-white/30 line-through">
+                          {totalPrice.toLocaleString("vi-VN")}đ
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSubmitOrder}
+                  disabled={isSubmitting}
+                  className="bg-amber-500 text-zinc-900 font-black px-8 py-3 rounded-2xl flex items-center gap-2 hover:bg-amber-400 transition-all active:scale-95 disabled:opacity-50 h-fit"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "GỬI ORDER"
+                  )}
+                </button>
               </div>
-              <button
-                onClick={handleSubmitOrder}
-                disabled={isSubmitting}
-                className="bg-amber-500 text-zinc-900 font-black px-8 py-3 rounded-2xl flex items-center gap-2 hover:bg-amber-400 transition-all active:scale-95 disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                   "GỬI ORDER"
-                )}
-              </button>
             </div>
           </motion.div>
         )}
@@ -573,22 +683,194 @@ export default function OrderClient({ table: initialTable, menuItems }: { table:
               </div>
 
               <div className="p-8 bg-zinc-50 border-t border-zinc-100">
-                <div className="flex items-center justify-between mb-8">
-                  <span className="text-zinc-400 font-black uppercase tracking-widest">Tổng hóa đơn</span>
-                  <span className="text-3xl font-black text-amber-600">{bill.total.toLocaleString("vi-VN")}đ</span>
+                <div className="space-y-2 mb-8">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Tạm tính</span>
+                    <span className="text-sm font-bold text-zinc-900">{(bill as any).totalBeforeDiscount?.toLocaleString("vi-VN") || bill.total.toLocaleString("vi-VN")}đ</span>
+                  </div>
+                  {(bill as any).totalDiscount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Giảm giá</span>
+                      <span className="text-sm font-bold text-amber-500">-{(bill as any).totalDiscount.toLocaleString("vi-VN")}đ</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
+                    <span className="text-zinc-400 font-black uppercase tracking-widest">Tổng hóa đơn</span>
+                    <span className="text-3xl font-black text-amber-600">{bill.total.toLocaleString("vi-VN")}đ</span>
+                  </div>
                 </div>
-                <button 
-                  onClick={() => setShowBill(false)}
-                  className="w-full bg-zinc-900 text-white font-black py-5 rounded-2xl hover:bg-amber-500 transition-all active:scale-95"
-                >
-                  OK, TIẾP TỤC
-                </button>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => setShowBill(false)}
+                    className="w-full bg-zinc-900 text-white font-black py-5 rounded-2xl hover:bg-amber-500 transition-all active:scale-95 shadow-xl shadow-zinc-900/10"
+                  >
+                    OK, TIẾP TỤC GỌI MÓN
+                  </button>
+                  
+                  {bill.items.some(i => i.orderStatus === "SERVED") && (
+                    <button 
+                      onClick={() => {
+                        const orderId = bill.items.find(i => i.orderStatus === "SERVED")?.orderId;
+                        if (orderId) {
+                          window.location.href = `/review/${orderId}`;
+                        }
+                      }}
+                      className="w-full bg-white text-primary border-2 border-primary font-black py-4 rounded-2xl hover:bg-orange-50 transition-all flex items-center justify-center gap-2 group"
+                    >
+                      <Star className="w-5 h-5 fill-primary group-hover:scale-110 transition-transform" />
+                      ĐÁNH GIÁ CHẤT LƯỢNG MÓN
+                    </button>
+                  )}
+                </div>
                 <p className="text-center text-[10px] font-bold text-zinc-400 mt-4 px-4 uppercase leading-relaxed tracking-wider">
                   Sau 2 phút gọi món, nếu muốn hủy vui lòng liên hệ nhân viên phục vụ hoặc nhắn tin qua Chat tự động.
                 </p>
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Voucher Selection Modal */}
+      <AnimatePresence>
+        {showVoucherModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-zinc-900/80 backdrop-blur-sm"
+              onClick={() => setShowVoucherModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-md rounded-[40px] shadow-2xl relative overflow-hidden p-8 flex flex-col max-h-[80vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-2xl font-black text-zinc-900 leading-tight">Ưu đãi dành cho bạn</h3>
+                <button onClick={() => setShowVoucherModal(false)} className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center">
+                  <X className="w-5 h-5 text-zinc-400" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2 -mr-2">
+                {availableVouchers.map((v) => {
+                  const isEligible = !v.minOrderAmount || totalPrice >= Number(v.minOrderAmount);
+                  return (
+                    <div 
+                      key={v.id} 
+                      className={`relative p-5 rounded-3xl border-2 transition-all flex flex-col gap-3 group ${
+                        isEligible 
+                          ? "bg-white border-zinc-100 hover:border-amber-500 cursor-pointer" 
+                          : "bg-zinc-50 border-zinc-100 opacity-60 grayscale cursor-not-allowed"
+                      }`}
+                      onClick={() => {
+                        if (isEligible) {
+                          setVoucherCode(v.code);
+                          setShowVoucherModal(false);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                         <div className="bg-amber-50 text-amber-600 font-black px-4 py-1.5 rounded-xl text-sm tracking-wide border border-amber-100">
+                           {v.code}
+                         </div>
+                         <div className="text-right">
+                            <p className="text-xl font-black text-zinc-900">
+                              {v.discountType === "PERCENTAGE" ? `${v.value}%` : `${Number(v.value).toLocaleString("vi-VN")}đ`}
+                            </p>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">GIẢM GIÁ</p>
+                         </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-zinc-600">
+                          {v.discountType === "PERCENTAGE" 
+                            ? `Giảm ${v.value}% cho đơn hàng của bạn.` 
+                            : `Giảm trực tiếp ${Number(v.value).toLocaleString("vi-VN")}đ.`}
+                        </p>
+                        {v.minOrderAmount > 0 && (
+                          <p className={`text-[10px] font-black uppercase tracking-tight ${totalPrice < Number(v.minOrderAmount) ? "text-red-500" : "text-emerald-600"}`}>
+                            {totalPrice < Number(v.minOrderAmount) 
+                              ? `Cần thêm ${(Number(v.minOrderAmount) - totalPrice).toLocaleString("vi-VN")}đ để sử dụng` 
+                              : `Đã đủ điều kiện áp dụng (Đơn > ${Number(v.minOrderAmount).toLocaleString("vi-VN")}đ)`}
+                          </p>
+                        )}
+                      </div>
+                      
+                      {isEligible && (
+                        <div className="absolute inset-0 bg-amber-500/0 group-hover:bg-amber-500/5 transition-colors rounded-3xl" />
+                      )}
+                    </div>
+                  );
+                })}
+                
+                {availableVouchers.length === 0 && (
+                  <div className="text-center py-10">
+                    <p className="text-zinc-400 font-bold text-sm">Hiện chưa có mã giảm giá nào khả dụng.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-zinc-100">
+                 <button
+                   onClick={() => setShowVoucherModal(false)}
+                   className="w-full py-2 text-xs font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-900 transition-colors"
+                 >
+                   Đóng lại
+                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Thank You & Review Modal (Post-payment) */}
+      <AnimatePresence>
+        {showFinishModal && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-zinc-900/90 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="bg-white w-full max-w-sm rounded-[48px] shadow-2xl relative overflow-hidden p-10 text-center"
+            >
+              <div className="w-24 h-24 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 rotate-6">
+                 <CheckCircle2 className="w-12 h-12 text-emerald-500 -rotate-6" />
+              </div>
+              
+              <h3 className="text-3xl font-black text-zinc-900 mb-4">Cảm ơn quý khách!</h3>
+              <p className="text-zinc-500 font-medium mb-10">
+                Bàn của bạn đã được thanh toán thành công. Hy vọng bạn đã có một bữa ăn tuyệt vời tại Quán Ngon!
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                {lastOrderId && (
+                  <Link 
+                    href={`/review/${lastOrderId}`}
+                    className="w-full bg-primary text-white font-black py-5 rounded-2xl hover:bg-orange-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-orange-500/20"
+                  >
+                    <Star className="w-5 h-5 fill-white" />
+                    ĐÁNH GIÁ NGAY
+                  </Link>
+                )}
+                <button
+                  onClick={() => window.location.href = "/"}
+                  className="w-full py-4 text-sm font-black text-zinc-400 hover:text-zinc-900 transition-colors uppercase tracking-widest"
+                >
+                  Về trang chủ
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

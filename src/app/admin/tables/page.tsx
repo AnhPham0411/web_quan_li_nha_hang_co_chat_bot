@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { TablesClient } from "./TablesClient";
+import { serializePrisma } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -20,31 +21,9 @@ export default async function TablesPage() {
     },
   });
 
-  // Serialize dates to strings for client component
+  // Serialize data for client component
   const serialized = tables.map((t) => ({
-    ...t,
-    lockedUntil: t.lockedUntil?.toISOString() ?? null,
-    createdAt: t.createdAt.toISOString(),
-    updatedAt: t.updatedAt.toISOString(),
-    reservations: t.reservations.map((r) => ({
-      ...r,
-      reservedAt: r.reservedAt.toISOString(),
-    })),
-    orders: t.orders.map((order) => ({
-      ...order,
-      createdAt: order.createdAt.toISOString(),
-      updatedAt: order.updatedAt.toISOString(),
-      items: order.items.map((item) => ({
-        ...item,
-        createdAt: item.createdAt.toISOString(),
-        menuItem: {
-          ...item.menuItem,
-          price: Number(item.menuItem.price),
-          createdAt: item.menuItem.createdAt.toISOString(),
-          updatedAt: item.menuItem.updatedAt.toISOString(),
-        },
-      })),
-    })),
+    ...serializePrisma(t),
     currentBill: t.orders.reduce((acc, order) => {
         return acc + order.items.reduce((sum, item) => sum + (Number(item.menuItem.price) * item.quantity), 0);
     }, 0)

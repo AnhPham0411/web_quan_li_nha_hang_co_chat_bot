@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import OrderClient from "./OrderClient";
+import { serializePrisma } from "@/lib/utils";
 
 export default async function OrderPage({ params }: { params: Promise<{ tableId: string }> }) {
   const { tableId } = await params;
@@ -21,7 +22,7 @@ export default async function OrderPage({ params }: { params: Promise<{ tableId:
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      <OrderClient table={table} menuItems={JSON.parse(JSON.stringify(menuItems))} />
+      <OrderClient table={serializePrisma(table)} menuItems={serializePrisma(menuItems)} />
     </div>
   );
 }

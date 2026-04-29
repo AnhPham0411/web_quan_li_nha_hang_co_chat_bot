@@ -231,9 +231,84 @@ export async function POST(req: NextRequest) {
   }
 
   // =============================================
+  // INTENT: Recommendations — Gợi ý món ăn
+  // =============================================
+  const lowercaseQuery = queryText.toLowerCase();
+  
+  if (lowercaseQuery.includes("chạy nhất") || lowercaseQuery.includes("bán chạy")) {
+    const topItems = await prisma.orderItem.groupBy({
+      by: ['menuItemId'],
+      _count: { menuItemId: true },
+      orderBy: { _count: { menuItemId: 'desc' } },
+      take: 3,
+    });
+
+    const menuItems = await prisma.menuItem.findMany({
+      where: { id: { in: topItems.map(t => t.menuItemId) } }
+    });
+
+    if (menuItems.length > 0) {
+      const itemsList = menuItems.map(item => `• ${item.name}: ${Number(item.price).toLocaleString("vi-VN")}đ`).join("\n");
+      return NextResponse.json({
+        fulfillmentText: `Dạ đây là 3 món đang được yêu thích nhất tại quán hôm nay ạ:\n${itemsList}\n\nAnh/chị có muốn đặt món nào không ạ? 😊`
+      });
+    } else {
+      return NextResponse.json({
+        fulfillmentText: "Dạ hiện tại em chưa thống kê được món chạy nhất, nhưng các món trong menu đều rất tươi ngon ạ. Anh/chị xem menu nhé?"
+      });
+    }
+  }
+
+  if (lowercaseQuery.includes("combo") || lowercaseQuery.includes("khuyến mãi")) {
+    const combos = await prisma.menuItem.findMany({
+      where: { 
+        OR: [
+          { category: { contains: "Combo" } },
+          { name: { contains: "Combo" } },
+          { description: { contains: "khuyến mãi" } }
+        ],
+        isAvailable: true
+      },
+      take: 3
+    });
+
+    if (combos.length > 0) {
+      const itemsList = combos.map(item => `• ${item.name}: ${Number(item.price).toLocaleString("vi-VN")}đ`).join("\n");
+      return NextResponse.json({
+        fulfillmentText: `Dạ quán đang có các gói combo tiết kiệm sau ạ:\n${itemsList}\n\nĐặt combo sẽ hời hơn gọi lẻ đó ạ! 😉`
+      });
+    } else {
+      return NextResponse.json({
+        fulfillmentText: "Dạ hiện tại quán chưa có chương trình combo mới, nhưng các món lẻ vẫn đang rất ngon ạ. Anh/chị xem menu nhé?"
+      });
+    }
+  }
+
+  if (lowercaseQuery.includes("lẩu")) {
+    const items = await prisma.menuItem.findMany({
+      where: { 
+        name: { contains: "Lẩu" },
+        isAvailable: true
+      },
+      take: 3
+    });
+
+    if (items.length > 0) {
+      const itemsList = items.map(item => `• ${item.name}: ${Number(item.price).toLocaleString("vi-VN")}đ`).join("\n");
+      return NextResponse.json({
+        fulfillmentText: `Dạ quán có các loại lẩu sau rất hợp cho nhóm mình ạ:\n${itemsList}\n\nAnh/chị cần em tư vấn kỹ hơn về vị lẩu nào không ạ? 🍲`
+      });
+    } else {
+      return NextResponse.json({
+        fulfillmentText: "Dạ hiện tại quán đang cập nhật các món lẩu mới. Anh/chị xem các món nướng hoặc xào khác cũng rất ngon ạ!"
+      });
+    }
+  }
+
+  // =============================================
   // INTENT: Human Handoff — Chuyển giao nhân viên
   // =============================================
-  if (intentName === "human_handoff" || intentName === "Default Fallback Intent") {
+  if (intentName === "human_handoff" || intentName === "Default Fallback Intent" || intentName === "default") {
     const isHandoff = body?.queryResult?.parameters?.isHandoff === true;
 
     if (isHandoff) {

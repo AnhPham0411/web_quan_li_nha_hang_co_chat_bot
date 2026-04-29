@@ -30,6 +30,7 @@ export async function GET(
     // Gộp tất cả các item từ nhiều order (vì logic gộp đã có ở POST, thường sẽ chỉ có 1 order, nhưng để chắc chắn ta cứ gộp)
     const allItems = orders.flatMap(o => o.items.map(item => ({
       id: item.id,
+      orderId: o.id, // Thêm orderId vào đây
       name: item.menuItem.name,
       price: Number(item.menuItem.price),
       quantity: item.quantity,
@@ -38,11 +39,15 @@ export async function GET(
       orderStatus: o.status
     })));
 
-    const grandTotal = allItems.reduce((sum, item) => sum + item.total, 0);
+    const totalBeforeDiscount = allItems.reduce((sum, item) => sum + item.total, 0);
+    const totalDiscount = orders.reduce((sum, o) => sum + Number(o.discountAmount), 0);
+    const grandTotal = Math.max(0, totalBeforeDiscount - totalDiscount);
 
     return NextResponse.json({
       items: allItems,
       total: grandTotal,
+      totalBeforeDiscount,
+      totalDiscount,
       tableId: id,
     });
   } catch (error) {

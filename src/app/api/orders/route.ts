@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
+import { auth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const { tableId, items, notes } = await req.json();
+    const session = await auth();
+    const userId = session?.user?.id;
+    const { tableId, items, notes, voucherId, discountAmount, totalPrice } = await req.json();
 
     if (!tableId || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Invalid order data" }, { status: 400 });
@@ -43,6 +46,7 @@ export async function POST(req: NextRequest) {
         currentOrder = await tx.order.update({
           where: { id: existingOrder.id },
           data: {
+            userId: userId || existingOrder.userId, // Giữ userId cũ hoặc cập nhật nếu mới log in
             items: {
               create: items.map((item: any) => ({
                 menuItemId: item.menuItemId,
@@ -50,6 +54,10 @@ export async function POST(req: NextRequest) {
                 notes: item.notes,
               })),
             },
+            // Update pricing if provided
+            voucherId: voucherId || undefined,
+            discountAmount: discountAmount || undefined,
+            totalPrice: totalPrice || undefined,
           },
           include: {
             items: { include: { menuItem: true } },
@@ -61,8 +69,12 @@ export async function POST(req: NextRequest) {
         currentOrder = await tx.order.create({
           data: {
             tableId,
+            userId,
             status: "PENDING",
             notes,
+            voucherId,
+            discountAmount,
+            totalPrice,
             items: {
               create: items.map((item: any) => ({
                 menuItemId: item.menuItemId,
@@ -126,9 +138,21 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-    // Lấy danh sách order (dành cho Admin/Staff)
     try {
+        const session = await auth();
+        const { searchParams } = new URL(req.url);
+        const filterUserId = searchParams.get("userId");
+        
+        // Logic lọc: nếu là Customer thì chỉ lấy của họ, nếu là Admin thì lấy hết (hoặc theo filter)
+        const where: any = {};
+        if (session?.user && (session.user as any).role === "CUSTOMER") {
+            where.userId = session.user.id;
+        } else if (filterUserId) {
+            where.userId = filterUserId;
+        }
+
         const orders = await prisma.order.findMany({
+            where,
             orderBy: { createdAt: "desc" },
             include: {
                 table: true,
@@ -136,7 +160,8 @@ export async function GET(req: NextRequest) {
                     include: {
                         menuItem: true
                     }
-                }
+                },
+                review: true
             }
         });
         return NextResponse.json(orders);

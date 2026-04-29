@@ -47,14 +47,12 @@ export function Navbar() {
           >
             Đặt bàn
           </Link>
-          {session?.user && (
-            <Link 
-              href="/reservation/history" 
-              className={`transition-colors ${pathname === "/reservation/history" ? "text-primary" : "text-zinc-500 hover:text-secondary"}`}
-            >
-              Lịch sử
-            </Link>
-          )}
+          <Link 
+            href="/reservation/history" 
+            className={`transition-colors ${pathname === "/reservation/history" || pathname.includes("/review") ? "text-primary" : "text-zinc-500 hover:text-secondary"}`}
+          >
+            Lịch sử & Đánh giá
+          </Link>
           
           <div className="h-4 w-px bg-zinc-200 mx-2" />
           {session?.user ? (

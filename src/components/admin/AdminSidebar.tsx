@@ -10,6 +10,8 @@ import {
   LogOut,
   ChefHat,
   Package,
+  Ticket,
+  MessageSquare,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Users } from "lucide-react";
@@ -20,6 +22,8 @@ const navItems = [
   { href: "/admin/tables", label: "Sơ đồ bàn", icon: TableProperties },
   { href: "/admin/menu", label: "Thực đơn", icon: UtensilsCrossed },
   { href: "/admin/reservations", label: "Đặt bàn", icon: CalendarCheck },
+  { href: "/admin/vouchers", label: "Mã giảm giá", icon: Ticket },
+  { href: "/admin/reviews", label: "Đánh giá", icon: MessageSquare },
   { href: "/admin/users", label: "Người dùng", icon: Users, adminOnly: true },
 ];
 

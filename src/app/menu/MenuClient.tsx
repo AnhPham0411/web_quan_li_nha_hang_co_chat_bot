@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Filter, Star, ShoppingCart, Info, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "next/navigation";
 
 interface MenuItem {
   id: string;
@@ -27,6 +28,17 @@ export default function MenuClient({ items, categories, tables }: MenuClientProp
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [showTableSelect, setShowTableSelect] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const itemId = searchParams.get("itemId");
+    if (itemId) {
+      const item = items.find(i => i.id === itemId);
+      if (item) {
+        setSelectedItem(item);
+      }
+    }
+  }, [searchParams, items]);
 
   const filteredItems = items.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());

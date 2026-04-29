@@ -15,9 +15,10 @@ interface Message {
 }
 
 const QUICK_REPLIES = [
+  "Món chạy nhất hôm nay",
+  "Combo khuyến mãi",
+  "Tìm món lẩu",
   "Quán còn bàn cho 2 người không?",
-  "Hôm nay còn gà nướng không?",
-  "Kiểm tra đơn đặt bàn của tôi",
   "Địa chỉ và giờ mở cửa?",
 ];
 
